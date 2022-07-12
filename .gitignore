@@ -1,1 +1,4 @@
+# Ignored because it sets envionment vars with secrets.
+run.ps1
+
 /target
