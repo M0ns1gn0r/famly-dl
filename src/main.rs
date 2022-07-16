@@ -11,7 +11,7 @@ error_chain! {
     }
 }
 
-fn main() -> Result<()> {
+fn create_web_client() -> Result<reqwest::blocking::Client> {
     let access_token_from_env = env::var("FAMLY_ACCESS_TOKEN").unwrap_or_default();
     let mut access_token = HeaderValue::from_str(access_token_from_env.as_str()).unwrap();
     access_token.set_sensitive(true);
@@ -30,6 +30,12 @@ fn main() -> Result<()> {
     let client = reqwest::blocking::Client::builder()
         .default_headers(headers)
         .build()?;
+
+    Ok(client)
+}
+
+fn main() -> Result<()> {
+    let client = create_web_client()?;
 
     let mut body = String::new();
 
