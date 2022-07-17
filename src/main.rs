@@ -1,5 +1,6 @@
 mod config;
 mod console;
+mod child_info;
 
 use error_chain::error_chain;
 use reqwest::blocking::Client;
@@ -10,6 +11,10 @@ use std::io::{Read};
 use config::Config;
 
 error_chain! {
+    links {
+        ChildInfo(child_info::Error, child_info::ErrorKind);
+    }
+
     foreign_links {
         Io(std::io::Error);
         HttpRequest(reqwest::Error);
@@ -38,7 +43,7 @@ fn create_web_client(access_token: String) -> Result<Client> {
     Ok(client)
 }
 
-fn get_childred(client: Client) -> Result<String> {
+fn fetch_child_infos(client: Client) -> Result<String> {
     let mut body = String::new();
     client
         .get("https://app.famly.de/api/v2/calendar/list")
@@ -55,10 +60,27 @@ fn main() -> Result<()> {
     }
 
     let client = create_web_client(env.access_token)?;
-    let children = get_childred(client)?;
     
-    let children_part: String = children.chars().take(100).collect();
-    println!("{} ...", children_part);
+    let child_infos_json = fetch_child_infos(client)?;
+    let child_infos = child_info::from_json(child_infos_json)?;
 
+    println!("\nFound children:");
+    for (pos, ci) in child_infos.iter().enumerate() {
+        println!("{}. {} ({})", pos + 1, ci.name, ci.institution);
+    }
+    println!();
+
+    let child_id: &String;
+    loop {
+        if let Some(child_number) = console::choose_number("Enter the target child number: ", child_infos.len() + 1) {
+            child_id = &child_infos[child_number - 1].id;
+            break;
+        } else {
+            println!("Invalid number")
+        }
+    }
+
+    println!("Processing child {0} ...", child_id);
+    
     Ok(())
 }
