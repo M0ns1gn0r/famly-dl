@@ -1,10 +1,11 @@
 mod config;
+mod console;
 
 use error_chain::error_chain;
 use reqwest::blocking::Client;
 use reqwest::header;
 use reqwest::header::HeaderValue;
-use std::io::{Read, Write};
+use std::io::{Read};
 
 use config::Config;
 
@@ -49,15 +50,7 @@ fn get_childred(client: Client) -> Result<String> {
 fn main() -> Result<()> {
     let env = Config::new();
 
-    print!("Are you ready to start y/[N]? ");
-    let mut answer_raw = String::new();
-    std::io::stdout().flush()?;
-    std::io::stdin()
-        .read_line(&mut answer_raw)
-        .expect("Failed to read input");
-    let answer = answer_raw.trim_end();
-    if answer != "y" && answer != "Y" {
-        println!("User cancelled");
+    if !console::confirm("Are you ready to start y/[N]? ") {
         return Ok(())
     }
 
