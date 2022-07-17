@@ -1,9 +1,10 @@
 mod config;
 
+use error_chain::error_chain;
+use reqwest::blocking::Client;
 use reqwest::header;
 use reqwest::header::HeaderValue;
-use error_chain::error_chain;
-use std::io::Read;
+use std::io::{Read, Write};
 
 use config::Config;
 
@@ -14,7 +15,7 @@ error_chain! {
     }
 }
 
-fn create_web_client(access_token: String) -> Result<reqwest::blocking::Client> {
+fn create_web_client(access_token: String) -> Result<Client> {
     let mut access_token_header_val = HeaderValue::from_str(access_token.as_str()).unwrap();
     access_token_header_val.set_sensitive(true);
 
@@ -29,26 +30,42 @@ fn create_web_client(access_token: String) -> Result<reqwest::blocking::Client> 
     headers.insert("x-famly-version", HeaderValue::from_static("2153d828df"));
     headers.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-cache"));
     
-    let client = reqwest::blocking::Client::builder()
+    let client = Client::builder()
         .default_headers(headers)
         .build()?;
 
     Ok(client)
 }
 
-fn main() -> Result<()> {
-    let env = Config::new();
-
-    let client = create_web_client(env.access_token)?;
-
+fn get_childred(client: Client) -> Result<String> {
     let mut body = String::new();
     client
-        //.get("https://app.famly.de/api/feed/feed/feed?olderThan=2022-07-09T11%3A36%3A29%2B00%3A00")
         .get("https://app.famly.de/api/v2/calendar/list")
         .send()?
         .read_to_string(&mut body)?;
+    Ok(body)
+}
 
-    println!("{}", body);
+fn main() -> Result<()> {
+    let env = Config::new();
+
+    print!("Are you ready to start y/[N]? ");
+    let mut answer_raw = String::new();
+    std::io::stdout().flush()?;
+    std::io::stdin()
+        .read_line(&mut answer_raw)
+        .expect("Failed to read input");
+    let answer = answer_raw.trim_end();
+    if answer != "y" && answer != "Y" {
+        println!("User cancelled");
+        return Ok(())
+    }
+
+    let client = create_web_client(env.access_token)?;
+    let children = get_childred(client)?;
+    
+    let children_part: String = children.chars().take(100).collect();
+    println!("{} ...", children_part);
 
     Ok(())
 }
