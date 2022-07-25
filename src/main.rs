@@ -1,15 +1,16 @@
 mod config;
 mod console;
 mod child_info;
+mod file_system;
 
 use child_info::ChildInfo;
+use config::Config;
 use error_chain::error_chain;
+use file_system::create_dir;
 use reqwest::blocking::Client;
 use reqwest::header;
 use reqwest::header::HeaderValue;
-use std::io::{Read};
-
-use config::Config;
+use std::io::Read;
 
 error_chain! {
     links {
@@ -90,8 +91,9 @@ fn main() -> Result<()> {
 
     let (child_id, child_first_name) = choose_target_child(child_infos);
     println!("{0} is selected ({1})", child_first_name, child_id);
-    
-    
+
+    create_dir(child_first_name.as_str())
+        .expect("Cannot create target folder");
 
     Ok(())
 }

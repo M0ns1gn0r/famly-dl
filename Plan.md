@@ -1,4 +1,4 @@
-* Check the *target folder* exists or can be created
+* ✅ Check the *target folder* exists or can be created
 * ✅ Get the list of children `https://app.famly.de/api/v2/calendar/list`
 * ✅ Ask to choose the target child and get its id
 
