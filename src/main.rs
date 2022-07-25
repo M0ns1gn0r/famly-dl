@@ -75,9 +75,7 @@ fn choose_target_child(child_infos: Vec<ChildInfo>) -> (String, String) {
 fn main() -> Result<()> {
     let env = Config::new();
 
-    if !console::confirm("Are you ready to start y/[N]? ") {
-        return Ok(())
-    }
+    console::confirm("Press ENTER to start...");
 
     let client = create_web_client(env.access_token)?;
     

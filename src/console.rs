@@ -1,6 +1,6 @@
 use std::io::Write;
 
-pub fn confirm(question: &str) -> bool {
+pub fn confirm(question: &str) -> () {
     print!("{}", question);
     
     let mut answer_raw = String::new();
@@ -8,9 +8,6 @@ pub fn confirm(question: &str) -> bool {
     std::io::stdin()
         .read_line(&mut answer_raw)
         .expect("Failed to read input");
-    let answer = answer_raw.trim_end();
-        
-    answer == "y" || answer == "Y"
 }
 
 pub fn choose_number(question: &str, max: usize) -> Option<usize> {
