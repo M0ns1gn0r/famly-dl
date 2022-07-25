@@ -9,8 +9,20 @@ error_chain! {
 
 pub struct ChildInfo {
     pub id: String,
-    pub name: String,
+    pub full_name_with_institution: String,
     pub institution: String,
+}
+
+impl ChildInfo {
+    /// Parses the full name to return the first name only, if possible.
+    /// Otherwise falls back to the full name.
+    pub fn get_first_name(&self) -> String {
+        if let Some(first_part) = self.full_name_with_institution.split_whitespace().next() {
+            first_part.to_string()
+        } else {
+            self.full_name_with_institution.clone()
+        }        
+    }
 }
 
 fn parse_string(v: &Value, property_name: &str) -> Result<String> {
@@ -28,7 +40,7 @@ pub fn from_json(json: String) -> Result<Vec<ChildInfo>> {
     for c in children {
         res.push(ChildInfo {
             id: parse_string(c, "childId")?,
-            name: parse_string(c, "name")?,
+            full_name_with_institution: parse_string(c, "name")?,
             institution: parse_string(&c["institution"], "title")?,
         })        
     }
