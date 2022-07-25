@@ -58,8 +58,8 @@ fn choose_target_child(child_infos: Vec<ChildInfo>) -> (String, String) {
     let child_first_name: String;
     loop {
         if let Some(child_number) = console::choose_number(
-            "Enter the target child number: ",
-            child_infos.len() + 1) {
+            "Enter the target child number (CTRL+C to exit): ",
+            child_infos.len()) {
             let child = &child_infos[child_number - 1];
             child_id = child.id.clone();
             child_first_name = child.get_first_name();
@@ -93,5 +93,7 @@ fn main() -> Result<()> {
     let (child_id, child_first_name) = choose_target_child(child_infos);
     println!("{0} is selected ({1})", child_first_name, child_id);
     
+    
+
     Ok(())
 }
