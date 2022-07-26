@@ -21,22 +21,26 @@ error_chain! {
 }
 
 fn choose_target_child(child_infos: Vec<ChildInfo>) -> (String, String) {
-    let child_id: String;
-    let child_first_name: String;
-    loop {
-        if let Some(child_number) = console::choose_number(
-            "Enter the target child number (CTRL+C to exit): ",
-            child_infos.len()) {
-            let child = &child_infos[child_number - 1];
-            child_id = child.id.clone();
-            child_first_name = child.get_first_name();
-            break;
-        } else {
-            println!("Invalid number")
-        }
+    let children_count = child_infos.len();
+
+    if children_count < 2 {
+        let child = &child_infos[0];
+        return (child.id.clone(), child.get_first_name());
     }
 
-    (child_id, child_first_name)
+    loop {
+        if let Some(child_number) =
+            console::choose_number("Select the child (CTRL+C to exit): ", children_count) {
+            let child = &child_infos[child_number - 1];
+            let child_id = child.id.clone();
+            let child_first_name = child.get_first_name();
+
+            println!("{0} is selected ({1})", child_first_name, child_id);
+            return (child_id, child_first_name);
+        }
+
+        println!("Invalid number")
+    }
 }
 
 fn fetch_feed_items(client: &reqwest::blocking::Client) -> Result<Vec<FeedItem>> {
@@ -79,14 +83,18 @@ fn main() -> Result<()> {
     let child_infos_json = http::fetch_child_infos(&client)?;
     let child_infos = child_info::from_json(child_infos_json)?;
 
-    println!("\nFound children:");
-    for (pos, ci) in child_infos.iter().enumerate() {
-        println!("{}. {} ({})", pos + 1, ci.full_name_with_institution, ci.institution);
+    if child_infos.is_empty() {
+        return Err(Error::from("No children found"));
+    }
+    if child_infos.len() > 1 {
+        println!("\nFound children:");
+        for (pos, ci) in child_infos.iter().enumerate() {
+            println!("{}. {} ({})", pos + 1, ci.full_name_with_institution, ci.institution);
+        }
     }
     println!();
 
-    let (child_id, child_first_name) = choose_target_child(child_infos);
-    println!("{0} is selected ({1})", child_first_name, child_id);
+    let (_child_id, child_first_name) = choose_target_child(child_infos);
 
     create_dir(child_first_name.as_str())
         .expect("Cannot create target folder");
