@@ -1,17 +1,21 @@
 mod config;
 mod console;
 mod child_info;
+mod feed_item;
 mod file_system;
 mod http;
+mod json;
 
 use child_info::ChildInfo;
 use config::Config;
 use error_chain::error_chain;
+use feed_item::FeedItem;
 use file_system::create_dir;
 
 error_chain! {
     links {
         ChildInfo(child_info::Error, child_info::ErrorKind);
+        FeedItem(feed_item::Error, feed_item::ErrorKind);
         Http(http::Error, http::ErrorKind);
     }
 }
@@ -35,6 +39,36 @@ fn choose_target_child(child_infos: Vec<ChildInfo>) -> (String, String) {
     (child_id, child_first_name)
 }
 
+fn fetch_feed_items(client: &reqwest::blocking::Client) -> Result<Vec<FeedItem>> {
+    let mut feed_items = vec![];
+    {
+        let mut i = 0_u8;
+        // TODO: test end condition: very big date.
+        let mut older_than = None;
+        loop {
+            if i > 1 {
+                // TODO: remove this artificial break condition.
+                break;
+            }
+            i += 1;
+
+            let feed_json = http::fetch_feed(&client, &older_than)?;
+            let (feed_item_portion, last_item_date) = feed_item::from_json(feed_json)?;
+
+            feed_items.extend(feed_item_portion);
+
+            if last_item_date.is_none() {
+                // The feed has ended.
+                break;
+            } else {
+                older_than = last_item_date;
+            }
+        }
+    }
+
+    Ok(feed_items)
+}
+
 fn main() -> Result<()> {
     let env = Config::new();
 
@@ -42,7 +76,7 @@ fn main() -> Result<()> {
 
     let client = http::create_web_client(env.access_token)?;
     
-    let child_infos_json = http::fetch_child_infos(client)?;
+    let child_infos_json = http::fetch_child_infos(&client)?;
     let child_infos = child_info::from_json(child_infos_json)?;
 
     println!("\nFound children:");
@@ -56,6 +90,12 @@ fn main() -> Result<()> {
 
     create_dir(child_first_name.as_str())
         .expect("Cannot create target folder");
+
+    let feed_items = fetch_feed_items(&client)?;
+    println!("{0} feed items loaded", feed_items.len());
+    for f in feed_items {
+        println!("* {}...", f.text.chars().take(30).collect::<String>());
+    }
 
     Ok(())
 }

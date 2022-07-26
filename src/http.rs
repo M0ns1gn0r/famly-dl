@@ -3,6 +3,7 @@ use reqwest::header;
 use reqwest::header::HeaderValue;
 use std::io::Read;
 use error_chain::error_chain;
+use urlencoding::encode;
 
 error_chain! {
     foreign_links {
@@ -33,11 +34,25 @@ pub fn create_web_client(access_token: String) -> Result<Client> {
     Ok(client)
 }
 
-pub fn fetch_child_infos(client: Client) -> Result<String> {
+pub fn fetch_child_infos(client: &Client) -> Result<String> {
     let mut body = String::new();
     client
         .get("https://app.famly.de/api/v2/calendar/list")
         .send()?
         .read_to_string(&mut body)?;
+    Ok(body)
+}
+
+pub fn fetch_feed(client: &Client, older_than: &Option<String>) -> Result<String> {
+    let mut url = String::from("https://app.famly.de/api/feed/feed/feed");
+    if let Some(date) =  older_than {
+        url.push_str("?olderThan=");
+        url.push_str(encode(date.as_str()).into_owned().as_str());
+    }
+
+    let body = client
+        .get(url)
+        .send()?
+        .text()?;
     Ok(body)
 }

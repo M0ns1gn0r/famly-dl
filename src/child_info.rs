@@ -1,6 +1,8 @@
 use serde_json::Value;
 use error_chain::error_chain;
 
+use crate::json::parse_string;
+
 error_chain! {
     foreign_links {
         Json(serde_json::Error);
@@ -23,13 +25,6 @@ impl ChildInfo {
             self.full_name_with_institution.clone()
         }        
     }
-}
-
-fn parse_string(v: &Value, property_name: &str) -> Result<String> {
-    let str = v[property_name]
-        .as_str()
-        .ok_or(format!("'{0}' is not a string", property_name))?;
-    Ok(str.to_string())
 }
 
 pub fn from_json(json: String) -> Result<Vec<ChildInfo>> {

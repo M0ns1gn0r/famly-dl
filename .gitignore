@@ -1,4 +1,5 @@
-# Ignored because it sets envionment vars with secrets.
+# Ignored because these files set environment vars with secrets.
 run.ps1
+.vscode/launch.json
 
 /target
