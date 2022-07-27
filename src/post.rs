@@ -24,25 +24,44 @@ pub struct Comment {
     pub text: String,
 }
 
+impl TryFrom<&Value> for Comment {
+    type Error = String;
+
+    fn try_from(json: &Value) -> core::result::Result<Self, Self::Error> {
+        let c = Comment {
+            date: parse_date(json, "createdDate")?,
+            text: parse_string(json, "body")?,
+            author: parse_string(&json["sender"], "name")?,
+        };
+        Ok(c)
+    }
+}
+
 pub struct Post {
     // Famly doesn't store time zones, all dates are in UTC anyways.
     pub date: DateTime<Utc>,
     pub author: String,
     pub text: String,
     //pub photos: Vec<Photo>,
-    //pub comments: Vec<Comment>,
+    pub comments: Vec<Comment>,
 }
 
-impl Post {
-    // TODO: try to implement a trait instead.
+impl TryFrom<&Value> for Post {
+    type Error = String;
 
-    pub fn from_json(json: &Value) -> Result<Post> {
-        let f = Post {
+    fn try_from(json: &Value) -> core::result::Result<Self, Self::Error> {
+        let untyped_comments = json["comments"].as_array().ok_or("No comments array in post json")?;
+
+        let p = Post {
             date: parse_date(json, "createdDate")?,
             text: parse_string(json, "body")?,
             author: parse_string(&json["sender"], "name")?,
+            comments: untyped_comments
+                .iter()
+                .map(|c| c.try_into().expect("Failed to deserialize a comment json"))
+                .collect(),
         };
-        Ok(f)
+        Ok(p)
     }
 }
 
@@ -67,8 +86,7 @@ pub fn from_feed_json(feed_json: String) -> Result<(Vec<Post>, Option<String>)> 
             continue;
         }
 
-        let f = Post::from_json(f)
-            .expect("Failed to deserialize a feed item json to a Post");
+        let f = f.try_into().expect("Failed to deserialize a feed item json to a post");
 
         // TODO: ensure has at least one photo tagged with the target childId.
 

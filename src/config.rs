@@ -6,7 +6,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new() -> Config {        
+    pub fn new() -> Config {
         let access_token = env::var("FAMLY_ACCESS_TOKEN").unwrap();
         let default_target_folder = env::var("FAMLY_TARGET_FOLDER").ok();
 
