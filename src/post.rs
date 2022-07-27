@@ -121,7 +121,7 @@ impl TryFrom<&Value> for Post {
 /// * collection of posts
 /// * an option value: `None` if there was no feed items in the json, otherwise `Some` with
 /// the *last_item_date* string for fetching of subsequent feed items.
-pub fn from_feed_json(feed_json: String) -> Result<(Vec<Post>, Option<String>)> {
+pub fn from_feed_json(feed_json: String, child_id: &String) -> Result<(Vec<Post>, Option<String>)> {
     let parsed_json: Value = serde_json::from_str(&feed_json)?;
     let feed_items = parsed_json["feedItems"].as_array().ok_or("No feedItems array in json")?;
     
@@ -138,11 +138,14 @@ pub fn from_feed_json(feed_json: String) -> Result<(Vec<Post>, Option<String>)> 
             continue;
         }
 
-        let f = f.try_into().expect("Failed to deserialize a feed item json to a post");
+        let post: Post = f.try_into().expect("Failed to deserialize a feed item json to a post");
 
-        // TODO: ensure has at least one photo tagged with the target childId.
+        if post.photos.iter().all(|p| !p.is_tagged(child_id)) {
+            // At least one photo must be tagged with the target child.
+            continue;
+        }
 
-        posts.push(f);
+        posts.push(post);
     }
 
     let last_item_date = feed_items.last().map(|x| x["createdDate"].as_str().unwrap().to_string());

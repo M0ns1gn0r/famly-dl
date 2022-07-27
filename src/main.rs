@@ -43,7 +43,7 @@ fn choose_target_child(child_infos: Vec<ChildInfo>) -> (String, String) {
     }
 }
 
-fn get_posts(client: &reqwest::blocking::Client) -> Result<Vec<Post>> {
+fn get_posts(client: &reqwest::blocking::Client, child_id: &String) -> Result<Vec<Post>> {
     let mut posts = vec![];
     {
         let mut i = 0_u8;
@@ -56,8 +56,8 @@ fn get_posts(client: &reqwest::blocking::Client) -> Result<Vec<Post>> {
             }
             i += 1;
 
-            let feed_json = http::fetch_feed(&client, &older_than)?;
-            let (posts_portion, last_item_date) = post::from_feed_json(feed_json)?;
+            let feed_json = http::fetch_feed(client, &older_than)?;
+            let (posts_portion, last_item_date) = post::from_feed_json(feed_json, child_id)?;
 
             posts.extend(posts_portion);
 
@@ -94,12 +94,12 @@ fn main() -> Result<()> {
     }
     println!();
 
-    let (_child_id, child_first_name) = choose_target_child(child_infos);
+    let (child_id, child_first_name) = choose_target_child(child_infos);
 
     create_dir(child_first_name.as_str())
         .expect("Cannot create target folder");
 
-    let posts = get_posts(&client)?;
+    let posts = get_posts(&client, &child_id)?;
     println!("{0} posts loaded", posts.len());
     for f in posts {
         println!("* {}...", f.text.chars().take(30).collect::<String>());
