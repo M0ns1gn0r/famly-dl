@@ -32,8 +32,13 @@ impl TryFrom<&Value> for Comment {
     fn try_from(json: &Value) -> core::result::Result<Self, Self::Error> {
         let name = parse_string(&json["sender"], "name")?;
         let child_name = parse_string(&json["sender"], "subtitle");
-        let author = if let Ok(child_name) = child_name && !child_name.is_empty() {
-            format!("{0} [{1}]", name, child_name)
+
+        let author = if let Ok(child_name) = child_name {
+            if !child_name.is_empty() {
+                format!("{0} [{1}]", name, child_name)
+            } else {
+                name
+            }
         } else {
             name
         };
