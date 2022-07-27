@@ -1,7 +1,7 @@
 mod config;
 mod console;
 mod child_info;
-mod feed_item;
+mod post;
 mod file_system;
 mod http;
 mod json;
@@ -9,13 +9,13 @@ mod json;
 use child_info::ChildInfo;
 use config::Config;
 use error_chain::error_chain;
-use feed_item::FeedItem;
+use post::Post;
 use file_system::create_dir;
 
 error_chain! {
     links {
         ChildInfo(child_info::Error, child_info::ErrorKind);
-        FeedItem(feed_item::Error, feed_item::ErrorKind);
+        Post(post::Error, post::ErrorKind);
         Http(http::Error, http::ErrorKind);
     }
 }
@@ -43,8 +43,8 @@ fn choose_target_child(child_infos: Vec<ChildInfo>) -> (String, String) {
     }
 }
 
-fn fetch_feed_items(client: &reqwest::blocking::Client) -> Result<Vec<FeedItem>> {
-    let mut feed_items = vec![];
+fn get_posts(client: &reqwest::blocking::Client) -> Result<Vec<Post>> {
+    let mut posts = vec![];
     {
         let mut i = 0_u8;
         // TODO: test end condition: very big date.
@@ -57,9 +57,9 @@ fn fetch_feed_items(client: &reqwest::blocking::Client) -> Result<Vec<FeedItem>>
             i += 1;
 
             let feed_json = http::fetch_feed(&client, &older_than)?;
-            let (feed_item_portion, last_item_date) = feed_item::from_json(feed_json)?;
+            let (posts_portion, last_item_date) = post::from_feed_json(feed_json)?;
 
-            feed_items.extend(feed_item_portion);
+            posts.extend(posts_portion);
 
             if last_item_date.is_none() {
                 // The feed has ended.
@@ -70,7 +70,7 @@ fn fetch_feed_items(client: &reqwest::blocking::Client) -> Result<Vec<FeedItem>>
         }
     }
 
-    Ok(feed_items)
+    Ok(posts)
 }
 
 fn main() -> Result<()> {
@@ -99,9 +99,9 @@ fn main() -> Result<()> {
     create_dir(child_first_name.as_str())
         .expect("Cannot create target folder");
 
-    let feed_items = fetch_feed_items(&client)?;
-    println!("{0} feed items loaded", feed_items.len());
-    for f in feed_items {
+    let posts = get_posts(&client)?;
+    println!("{0} posts loaded", posts.len());
+    for f in posts {
         println!("* {}...", f.text.chars().take(30).collect::<String>());
     }
 

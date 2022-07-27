@@ -24,7 +24,7 @@ pub struct Comment {
     pub text: String,
 }
 
-pub struct FeedItem {
+pub struct Post {
     // Famly doesn't store time zones, all dates are in UTC anyways.
     pub date: DateTime<Utc>,
     pub author: String,
@@ -33,11 +33,11 @@ pub struct FeedItem {
     //pub comments: Vec<Comment>,
 }
 
-impl FeedItem {
+impl Post {
     // TODO: try to implement a trait instead.
 
-    pub fn from_json(json: &Value) -> Result<FeedItem> {
-        let f = FeedItem {
+    pub fn from_json(json: &Value) -> Result<Post> {
+        let f = Post {
             date: parse_date(json, "createdDate")?,
             text: parse_string(json, "body")?,
             author: parse_string(&json["sender"], "name")?,
@@ -47,14 +47,14 @@ impl FeedItem {
 }
 
 /// Converts the raw JSON string to a tuple of:
-/// * collection of read deed items
-/// * an option that is `None` if no more items can be fetched, otherwise `Some` with
-/// a *last_item_date* string for a subsequent fetch of feed items
-pub fn from_json(json: String) -> Result<(Vec<FeedItem>, Option<String>)> {
-    let v: Value = serde_json::from_str(&json)?;
-    let feed_items = v["feedItems"].as_array().ok_or("No feedItems array in json")?;
+/// * collection of posts
+/// * an option value: `None` if there was no feed items in the json, otherwise `Some` with
+/// the *last_item_date* string for fetching of subsequent feed items.
+pub fn from_feed_json(feed_json: String) -> Result<(Vec<Post>, Option<String>)> {
+    let parsed_json: Value = serde_json::from_str(&feed_json)?;
+    let feed_items = parsed_json["feedItems"].as_array().ok_or("No feedItems array in json")?;
     
-    let mut items = vec![];
+    let mut posts = vec![];
     for f in feed_items {
         let class = &f["systemPostTypeClass"];
         if !class.is_null() && class.as_str().unwrap().starts_with("Daycare.") {
@@ -67,15 +67,15 @@ pub fn from_json(json: String) -> Result<(Vec<FeedItem>, Option<String>)> {
             continue;
         }
 
-        let f = FeedItem::from_json(f)
-            .expect("Failed to deserialize FeedItem");
+        let f = Post::from_json(f)
+            .expect("Failed to deserialize a feed item json to a Post");
 
         // TODO: ensure has at least one photo tagged with the target childId.
 
-        items.push(f);
+        posts.push(f);
     }
 
     let last_item_date = feed_items.last().map(|x| x["createdDate"].as_str().unwrap().to_string());
 
-    Ok((items, last_item_date))
+    Ok((posts, last_item_date))
 }
