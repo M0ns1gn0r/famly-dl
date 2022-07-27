@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use error_chain::error_chain;
 use serde_json::Value;
 
-use crate::json::parse_string;
+use crate::json::*;
 
 error_chain! {
     foreign_links {
@@ -25,8 +25,9 @@ pub struct Comment {
 }
 
 pub struct FeedItem {
-    //pub date: DateTime<Utc>,
-    //pub author: String,
+    // Famly doesn't store time zones, all dates are in UTC anyways.
+    pub date: DateTime<Utc>,
+    pub author: String,
     pub text: String,
     //pub photos: Vec<Photo>,
     //pub comments: Vec<Comment>,
@@ -37,9 +38,9 @@ impl FeedItem {
 
     pub fn from_json(json: &Value) -> Result<FeedItem> {
         let f = FeedItem {
+            date: parse_date(json, "createdDate")?,
             text: parse_string(json, "body")?,
-            // full_name_with_institution: parse_string(json, "name")?,
-            // institution: parse_string(&json["institution"], "title")?,
+            author: parse_string(&json["sender"], "name")?,
         };
         Ok(f)
     }
