@@ -1,5 +1,3 @@
-use std::fmt::format;
-
 use chrono::{DateTime, Utc};
 use error_chain::error_chain;
 use serde_json::Value;
@@ -14,10 +12,42 @@ error_chain! {
 
 pub struct Photo {
     pub id: String,
+    // TODO: parse date (it has different format).
+    // pub date: DateTime<Utc>,
     /// URL of the *full* size image (valid only for some time).
     pub url: String,
-    /// True if the photo is tagged with the target child.
-    pub is_tagged: bool,
+    tags: Vec<String>,
+}
+
+impl Photo {
+    /// Returns true if the photo is tagged with the target child.
+    pub fn is_tagged(&self, child_id: &String) -> bool {
+        self.tags.contains(child_id)
+    }
+}
+
+impl TryFrom<&Value> for Photo {
+    type Error = String;
+
+    fn try_from(json: &Value) -> core::result::Result<Self, Self::Error> {
+        let prefix = parse_string(&json, "prefix")?;
+        let key = parse_string(&json, "key")?;
+        let height = parse_int(&json, "height")?;
+        let width = parse_int(&json, "width")?;
+
+        let untyped_tags = json["tags"].as_array().ok_or("No tags array in image json")?;
+        let tags = untyped_tags
+            .iter()
+            .map(|t| parse_string(t, "childId").expect("Failed to deserialize a tag json"))
+            .collect();
+
+        let p = Photo {
+            id: parse_string(json, "imageId")?,
+            url: format!("{0}/{1}x{2}/{3}", prefix, width, height, key),
+            tags,
+        };
+        Ok(p)
+    }
 }
 
 pub struct Comment {
@@ -57,7 +87,7 @@ pub struct Post {
     pub date: DateTime<Utc>,
     pub author: String,
     pub text: String,
-    //pub photos: Vec<Photo>,
+    pub photos: Vec<Photo>,
     pub comments: Vec<Comment>,
 }
 
@@ -65,16 +95,23 @@ impl TryFrom<&Value> for Post {
     type Error = String;
 
     fn try_from(json: &Value) -> core::result::Result<Self, Self::Error> {
-        let untyped_comments = json["comments"].as_array().ok_or("No comments array in post json")?;
+        let photos = json["images"]
+            .as_array().ok_or("No images array in post json")?
+            .iter()
+            .map(|c| c.try_into().expect("Failed to deserialize an image json"))
+            .collect();
+        let comments = json["comments"]
+            .as_array().ok_or("No comments array in post json")?
+            .iter()
+            .map(|c| c.try_into().expect("Failed to deserialize a comment json"))
+            .collect();
 
         let p = Post {
             date: parse_date(json, "createdDate")?,
             text: parse_string(json, "body")?,
             author: parse_string(&json["sender"], "name")?,
-            comments: untyped_comments
-                .iter()
-                .map(|c| c.try_into().expect("Failed to deserialize a comment json"))
-                .collect(),
+            photos,
+            comments,
         };
         Ok(p)
     }

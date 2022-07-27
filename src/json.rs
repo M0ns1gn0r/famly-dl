@@ -1,6 +1,14 @@
 use chrono::{DateTime, Utc};
 use serde_json::Value;
 
+pub fn parse_int(v: &Value, property_name: &str) -> Result<u64, String> {
+    if let Some(val) = v[property_name].as_u64() {
+        Ok(val)
+    } else {
+        Err(format!("'{0}' is not an unsigned integer", property_name))
+    }
+}
+
 pub fn parse_string(v: &Value, property_name: &str) -> Result<String, String> {
     if let Some(str) = v[property_name].as_str() {
         Ok(str.to_string())
