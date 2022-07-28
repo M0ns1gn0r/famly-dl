@@ -86,7 +86,7 @@ fn download_posts(posts: &Vec<Post>, child: &ChildInfo) -> Result<()> {
         let mut photos = String::new();
         for ph in &p.photos {
             let img = format!(r#"<a target="_blank" href="{0}">
-    <img src="{0}" class="img-thumbnail" style="max-width: 245px" />
+    <img src="{0}" class="img-thumbnail" style="max-height: 240px" />
 </a>"#, ph.url);
             photos.push_str(img.as_str());
         }
