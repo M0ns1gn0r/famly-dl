@@ -47,7 +47,7 @@ pub fn fetch_feed(client: &Client, older_than: &Option<String>) -> Result<String
     let mut url = String::from("https://app.famly.de/api/feed/feed/feed");
     if let Some(date) =  older_than {
         url.push_str("?olderThan=");
-        url.push_str(encode(date.as_str()).into_owned().as_str());
+        url.push_str(encode(date).into_owned().as_str());
     }
 
     let body = client

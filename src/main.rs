@@ -47,7 +47,6 @@ fn get_posts(client: &reqwest::blocking::Client, child_id: &String) -> Result<Ve
     let mut posts = vec![];
     {
         let mut i = 0_u8;
-        // TODO: test end condition: very big date.
         let mut older_than = None;
         loop {
             if i > 1 {
