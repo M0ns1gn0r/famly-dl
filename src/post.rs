@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, TimeZone};
 use error_chain::error_chain;
 use serde_json::Value;
 
@@ -12,8 +12,7 @@ error_chain! {
 
 pub struct Photo {
     pub id: String,
-    // TODO: parse date (it has different format).
-    // pub date: DateTime<Utc>,
+    pub date: DateTime<Utc>,
     /// URL of the *full* size image (valid only for some time).
     pub url: String,
     tags: Vec<String>,
@@ -30,6 +29,13 @@ impl TryFrom<&Value> for Photo {
     type Error = String;
 
     fn try_from(json: &Value) -> core::result::Result<Self, Self::Error> {
+        let date_val = parse_string(&json["createdAt"], "date")?;
+        let date_str = date_val.as_str();
+        // The image creation date has a unique format, for simplicity we assume it
+        // is always in UTC (currently it is).
+        let date = Utc.datetime_from_str(date_str, "%Y-%m-%d %H:%M:%S%.6f")
+            .map_err(|e| format!("Failed to parse '{0}' as date: {1}", date_str, e))?;
+
         let prefix = parse_string(&json, "prefix")?;
         let key = parse_string(&json, "key")?;
         let height = parse_int(&json, "height")?;
@@ -43,6 +49,7 @@ impl TryFrom<&Value> for Photo {
 
         let p = Photo {
             id: parse_string(json, "imageId")?,
+            date,
             url: format!("{0}/{1}x{2}/{3}", prefix, width, height, key),
             tags,
         };
