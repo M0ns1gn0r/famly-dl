@@ -72,7 +72,7 @@ impl TryFrom<&Value> for Comment {
 
         let author = if let Ok(child_name) = child_name {
             if !child_name.is_empty() {
-                format!("{0} [{1}]", name, child_name)
+                format!("{0} | {1}", name, child_name)
             } else {
                 name
             }
@@ -96,6 +96,28 @@ pub struct Post {
     pub text: String,
     pub photos: Vec<Photo>,
     pub comments: Vec<Comment>,
+}
+
+impl Post {
+    /// Returns the post's title by taking first few symbols of its text.
+    pub fn get_title(&self) -> String {
+        let mut content_started = false;
+
+        self.text.chars()
+            .filter(|x| {
+                if *x == ' ' {
+                    // Skips leading whitespaces.
+                    content_started
+                } else if x.is_alphanumeric() {
+                    content_started = true;
+                    true
+                } else {
+                    false
+                }
+            })
+            .take(25)
+            .collect::<String>()
+    }
 }
 
 impl TryFrom<&Value> for Post {

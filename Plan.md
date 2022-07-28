@@ -10,8 +10,8 @@
     * Has at least one photo tagged with the target `childId`
 
     ### Then
-    *  For each post create `child_first_name/year/month/<first25symbolsFromBody>...[2].htm` with sender name, text body, photos, ~~names of who gave a like~~, comments
-    * Download each post's photo to `child_first_name/year/month/photos`
+    * ✅ For each post create `child_first_name/posts/year.month <first25symbolsFromBody>...[2].htm` with sender name, text body, photos, ~~names of who gave a like~~, comments
+    * Download each post's photo to `child_first_name/posts/photos`
     * Create a hardlink to each **tagged** photo in the folder `child_first_name/tagged_photos`
 
 * **LATER** Load a list of private messages `TODO LINK`
