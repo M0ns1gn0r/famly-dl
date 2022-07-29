@@ -5,9 +5,9 @@ pub fn render_post(post: &Post, child: &ChildInfo) -> String {
     let mut photos = String::new();
     for p in &post.photos {
         let tagged_style = if p.is_tagged(&child.id) { "border: 1px violet solid;" } else { "" };
-        let img = format!(r#"<a target="_blank" href="{url} style="text-decoration: none;">
-    <img src="{url}" class="img-thumbnail mb-1" style="max-height: 240px;{tagged_style}" />
-</a>"#, url = p.url, tagged_style = tagged_style);
+        let img = format!(r#"<a target="_blank" href="photos/{id}.jpg" style="text-decoration: none;">
+    <img src="photos/{id}.jpg" class="img-thumbnail mb-1" style="max-height: 240px;{tagged_style}" />
+</a>"#, id = p.id, tagged_style = tagged_style);
         photos.push_str(img.as_str());
     }
 

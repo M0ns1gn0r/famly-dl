@@ -51,7 +51,7 @@ fn get_posts(client: &reqwest::blocking::Client, child_id: &String) -> Result<Ve
         let mut i = 0_u8;
         let mut older_than = None;
         loop {
-            if i > 2 {
+            if i > 1 {
                 // TODO: remove this artificial break condition.
                 break;
             }
