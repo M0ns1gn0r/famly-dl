@@ -92,9 +92,10 @@ pub fn render_index(posts: &Vec<Post>, has_tagged_photos: bool) -> String {
                 prev_month = month;
             }
 
-            posts_html.push_str(
-                format!(r#"<a href="posts/{}">{}</a><br />"#, p.get_file_name(), p.get_title())
-                    .as_str());
+            posts_html.push_str(format!(
+                r#"<a href="posts/{}">{}</a><br />"#,
+                p.get_file_name(),
+                p.get_title(false)).as_str());
         }
 
         // Close table.

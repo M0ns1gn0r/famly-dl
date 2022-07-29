@@ -128,7 +128,7 @@ pub struct Post {
 
 impl Post {
     /// Returns the post's title by taking first few symbols of its text.
-    pub fn get_title(&self) -> String {
+    pub fn get_title(&self, short: bool) -> String {
         let mut content_started = false;
 
         self.text.chars()
@@ -143,12 +143,12 @@ impl Post {
                     false
                 }
             })
-            .take(25)
+            .take(if short { 25 } else { 75 })
             .collect::<String>()
     }
 
     pub fn get_file_name(&self) -> String {
-        format!("{}.{:02} {}.htm", self.date.year() - 2000, self.date.month(), self.get_title())
+        format!("{}.{:02} {}.htm", self.date.year() - 2000, self.date.month(), self.get_title(true))
     }
 
     /// Converts the raw JSON string to a tuple of:
