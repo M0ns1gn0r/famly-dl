@@ -20,7 +20,7 @@ pub fn render_post(post: &Post, child: &ChildInfo) -> String {
     if !post.comments.is_empty() {
         comments.push_str(r#"<hr /><h4 class="mb-3">Comments:</h4>"#);
         for c in &post.comments {
-            let comment = format!(r#"<div class="bg-light border p-2 mb-1 rounded-3">
+            let comment = format!(r#"<div class="bg-light border p-2 mb-2 rounded-3">
 💬<b class="ms-1">{0}</b>
 <br>
 <div style="white-space: pre-line;">{1}</div>
