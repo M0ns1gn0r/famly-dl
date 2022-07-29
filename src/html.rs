@@ -6,7 +6,7 @@ use crate::post::Post;
 pub fn render_post(post: &Post, child: &ChildInfo) -> String {
     let mut photos = String::new();
     for p in &post.photos {
-        let tagged_style = if p.is_tagged(&child.id) { "border: 1px violet solid;" } else { "" };
+        let tagged_style = if p.is_tagged(&child.id) { "background: violet;" } else { "" };
         let img = format!(r#"<a target="_blank" href="photos/{file_name}" style="text-decoration: none;">
     <img src="photos/{file_name}" class="img-thumbnail mb-1" style="max-height: 240px;{tagged_style}" />
 </a>"#,

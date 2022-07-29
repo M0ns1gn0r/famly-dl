@@ -8,12 +8,10 @@ mod html;
 mod json;
 
 use child_info::ChildInfo;
-use chrono::Datelike;
 use config::Config;
 use error_chain::error_chain;
 use file_system::create_dir;
 use post::{Post, Photo};
-use reqwest::blocking::Client;
 
 error_chain! {
     links {
@@ -67,23 +65,27 @@ fn store_posts(posts: &Vec<Post>, child: &ChildInfo) -> Result<()> {
         std::fs::write(htm_path, html)?;
 
         // Download photos and create hardlinks.
-        // TODO: uncomment
-        // for ph in &p.photos {
-        //     let photo_file_name = ph.get_file_name();
+        for ph in &p.photos {
+            if i > 10 {
+                // TODO: remove this artificial break condition.
+                break;
+            }
 
-        //     let photo_path = post_photos_dir.join(&photo_file_name);
-        //     if !photo_path.exists() {
-        //         let mut writer = std::fs::File::create(&photo_path)?;
-        //         http::download_image(&ph.url, &mut writer)?;
-        //     }
+            let photo_file_name = ph.get_file_name();
 
-        //     if ph.is_tagged(&child.id) {
-        //         let tagged_photo_path = tagged_photos_dir.join(&photo_file_name);
-        //         if !tagged_photo_path.exists() {
-        //             std::fs::hard_link(&photo_path, tagged_photo_path)?;
-        //         }
-        //     }
-        // }
+            let photo_path = post_photos_dir.join(&photo_file_name);
+            if !photo_path.exists() {
+                let mut writer = std::fs::File::create(&photo_path)?;
+                http::download_image(&ph.url, &mut writer)?;
+            }
+
+            if ph.is_tagged(&child.id) {
+                let tagged_photo_path = tagged_photos_dir.join(&photo_file_name);
+                if !tagged_photo_path.exists() {
+                    std::fs::hard_link(&photo_path, tagged_photo_path)?;
+                }
+            }
+        }
 
         i += 1;
         if i % 5 == 0 {
@@ -112,6 +114,12 @@ fn download_tagged_photos(photos: &Vec<Photo>, child: &ChildInfo) -> Result<()> 
         i += 1;
         if i % 10 == 0 {
             println!("{} of {} tagged photos downloaded...", i, total);
+        }
+
+        if i > 30 {
+            // TODO: remove this artificial break condition.
+            println!("STOPPED DOWNLOADING TAGGED PHOTOS");
+            break;
         }
     }
 
@@ -169,8 +177,7 @@ fn main() -> Result<()> {
 
     // Download tagged photos.
     if tagged_photos.len() > 0 {
-        // TODO: uncomment
-        // download_tagged_photos(&client, &tagged_photos, &child)?;
+        download_tagged_photos(&tagged_photos, &child)?;
     }
 
     // Create index.htm

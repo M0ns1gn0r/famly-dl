@@ -59,9 +59,9 @@ pub fn fetch_child_infos(client: &Client) -> Result<String> {
 }
 
 pub fn fetch_feed(client: &Client, older_than: &Option<String>) -> Result<String> {
-    let mut url = String::from("https://app.famly.de/api/feed/feed/feed");
+    let mut url = String::from("https://app.famly.de/api/feed/feed/feed?limit=100");
     if let Some(date) = older_than {
-        url.push_str("?olderThan=");
+        url.push_str("&olderThan=");
         url.push_str(encode(date).into_owned().as_str());
     }
 
@@ -99,10 +99,6 @@ pub fn fetch_till_exhausted<T, P>(load_next_batch: P) -> Result<Vec<T>>
     let mut i = 0_u16;
     let mut older_than = None;
     loop {
-        if i > 0 {
-            // TODO: remove this artificial break condition.
-            break;
-        }
         i += 1;
         if i % 5 == 0 {
             println!("{} API calls done...", i);
