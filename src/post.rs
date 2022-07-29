@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc, TimeZone};
+use chrono::{DateTime, Utc, TimeZone, Datelike};
 use error_chain::error_chain;
 use serde_json::Value;
 
@@ -145,6 +145,10 @@ impl Post {
             })
             .take(25)
             .collect::<String>()
+    }
+
+    pub fn get_file_name(&self) -> String {
+        format!("{}.{:02} {}.htm", self.date.year() - 2000, self.date.month(), self.get_title())
     }
 
     /// Converts the raw JSON string to a tuple of:

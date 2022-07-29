@@ -60,8 +60,7 @@ fn store_posts(client: &Client, posts: &Vec<Post>, child: &ChildInfo) -> Result<
         std::fs::create_dir_all(&post_photos_dir)?;
 
         // Create HTM file with post content.
-        let htm_path = posts_dir.join(
-            format!("{}.{:02} {}.htm", p.date.year() - 2000, p.date.month(), p.get_title()));
+        let htm_path = posts_dir.join(p.get_file_name());
         let html = html::render_post(p, child);
         std::fs::write(htm_path, html)?;
 
@@ -172,6 +171,16 @@ fn main() -> Result<()> {
     // Download tagged photos.
     if tagged_photos.len() > 0 {
         download_tagged_photos(&client, &tagged_photos, &child)?;
+    }
+
+    // Create index.htm
+    if posts.len() > 0 || tagged_photos.len() > 0 {
+        let name = &child.get_first_name();
+        let root_dir = std::path::Path::new(name);
+
+        let htm_path = root_dir.join("index.htm");
+        let html = html::render_index(&posts, tagged_photos.len() > 0);
+        std::fs::write(htm_path, html)?;
     }
 
     Ok(())

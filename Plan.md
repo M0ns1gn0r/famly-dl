@@ -14,7 +14,7 @@
     * Download each post's photo to `child_first_name/posts/photos`
     * Create a hardlink to each **tagged** photo in the folder `child_first_name/tagged_photos`
 
-* **LATER** Load a list of private messages `TODO LINK`
+* ⏸ **LATER** Load a list of private messages `TODO LINK`
     
     ### Filter
     * Has at least one photo tagged with the target `childId`
@@ -24,11 +24,11 @@
     * ?
 
 
-* Load a list of all tagged photos `https://app.famly.de/api/v2/images/tagged?childId=<GUID>limit=100&olderThan=2022-02-22T13%3A44%3A49%2B00%3A00`
+* ✅ Load a list of all tagged photos `https://app.famly.de/api/v2/images/tagged?childId=<GUID>limit=100&olderThan=2022-02-22T13%3A44%3A49%2B00%3A00`
     * Ensure each of them was already downloaded to `child_first_name/tagged_photos`, if not do that.
 
 
-* Create `child_first_name/index.htm` with such structure:
+* ✅ Create `child_first_name/index.htm` with such structure:
     ```
     POSTS
     YEAR.MONTH.DAY | <first25symbolsFromBody>...[2].htm (with a link to it)
