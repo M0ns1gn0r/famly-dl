@@ -4,6 +4,7 @@ mod child_info;
 mod post;
 mod file_system;
 mod http;
+mod html;
 mod json;
 
 use child_info::ChildInfo;
@@ -83,57 +84,12 @@ fn download_posts(posts: &Vec<Post>, child: &ChildInfo) -> Result<()> {
         let dir = root_dir.join("posts");
         std::fs::create_dir_all(&dir)?;
 
-        let mut photos = String::new();
-        for ph in &p.photos {
-            let img = format!(r#"<a target="_blank" href="{0}">
-    <img src="{0}" class="img-thumbnail" style="max-height: 240px" />
-</a>"#, ph.url);
-            photos.push_str(img.as_str());
-        }
+        // Create HTM file with post content.
+        let file_path = dir.join(format!("{}.{:02} {}.htm", p.date.year() - 2000, p.date.month(), p.get_title()));
+        let html = html::render_post(p, child);
+        std::fs::write(file_path, html)?;
 
-        let mut comments = String::new();
-        if !p.comments.is_empty() {
-            comments.push_str(r#"<hr /><h4 class="mb-3">Comments:</h4>"#);
-            for c in &p.comments {
-                let comment = format!(r#"<div class="bg-light border p-2 mb-1 rounded-3">
-    💬<b class="ms-1">{0}</b>
-    <br>
-    <div style="white-space: pre-line;">{1}</div>
-</div>
-"#, &c.author,&c.text);
-                comments.push_str(comment.as_str());
-            }
-        }
-
-        let html = format!(r#"
-<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-gH2yIJqKdNHPEq0n4Mqa/HGKIhSkIHeL5AyhkYV8i59U5AR6csBvApHHNl/vI1Bx" crossorigin="anonymous">
-</head>
-<body>
-<div class="container py-3" style="max-width: 1000px;">
-    <p>
-        <b>{author}</b>
-        <br>
-        {date}
-    </p>
-    <hr />
-    <div style="white-space: pre-line;">{text}</div>
-    <br />
-    <div>{photos}</div>
-    {comments}
-</div>
-</body>
-</html>"#,
-            author = p.author,
-            date = p.date.with_timezone(&chrono::Local).to_rfc2822(),
-            text = p.text,
-            comments = comments);
-
-        let file = dir.join(format!("{}.{:02} {}.htm", p.date.year() - 2000, p.date.month(), p.get_title()));
-        std::fs::write(file, html)?;
+        // TODO: Download photos.
 
         i += 1;
         if i % 10 == 0 {
@@ -147,8 +103,6 @@ fn download_posts(posts: &Vec<Post>, child: &ChildInfo) -> Result<()> {
 
 fn main() -> Result<()> {
     let env = Config::new();
-
-    console::confirm("Press ENTER to start...");
 
     let client = http::create_web_client(env.access_token)?;
     
