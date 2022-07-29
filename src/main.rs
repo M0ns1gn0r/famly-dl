@@ -11,8 +11,9 @@ use child_info::ChildInfo;
 use chrono::Datelike;
 use config::Config;
 use error_chain::error_chain;
-use post::{Post, Photo};
 use file_system::create_dir;
+use post::{Post, Photo};
+use reqwest::blocking::Client;
 
 error_chain! {
     links {
@@ -45,7 +46,7 @@ fn choose_target_child(child_infos: &Vec<ChildInfo>) -> &ChildInfo {
     }
 }
 
-fn store_posts(client: &reqwest::blocking::Client, posts: &Vec<Post>, child: &ChildInfo) -> Result<()> {
+fn store_posts(client: &Client, posts: &Vec<Post>, child: &ChildInfo) -> Result<()> {
     let name = &child.get_first_name();
     let root_dir = std::path::Path::new(name);
     let tagged_photos_dir = root_dir.join("tagged_photos");
@@ -92,6 +93,36 @@ fn store_posts(client: &reqwest::blocking::Client, posts: &Vec<Post>, child: &Ch
     Ok(())
 }
 
+fn download_tagged_photos(client: &Client, photos: &Vec<Photo>, child: &ChildInfo) -> Result<()> {
+    let dir_path = format!("{}/tagged_photos", &child.get_first_name());
+    let tagged_photos_dir = std::path::Path::new(dir_path.as_str());
+    std::fs::create_dir_all(&tagged_photos_dir)?;
+
+    let total = photos.len();
+    let mut i = 0;
+    for p in photos {
+        let photo_path = tagged_photos_dir.join(p.get_file_name());
+        if !photo_path.exists() {
+            let mut writer = std::fs::File::create(&photo_path)?;
+            http::download_image(client, &p.url, &mut writer)?;
+        }
+
+        i += 1;
+        if i % 10 == 0 {
+            println!("{} of {} tagged photos downloaded...", i, total);
+        }
+
+        if i > 30 {
+            // TODO: remove this artificial break condition.
+            println!("ARTIFICIALLY STOPPED AFTER 30 ITERATIONS");
+            break;
+        }
+    }
+
+    println!("All tagged photos downloaded");
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let env = Config::new();
 
@@ -125,7 +156,7 @@ fn main() -> Result<()> {
     })?;
     println!("{0} matching posts found", posts.len());
 
-    // Store posts and photos to disk.
+    // Store posts to disk and downloads related photos.
     if posts.len() > 0 {
         store_posts(&client, &posts, &child)?;
     }
@@ -138,7 +169,10 @@ fn main() -> Result<()> {
     })?;
     println!("{0} tagged photos found", tagged_photos.len());
 
-    // TODO: store tagged photos.
+    // Download tagged photos.
+    if tagged_photos.len() > 0 {
+        download_tagged_photos(&client, &tagged_photos, &child)?;
+    }
 
     Ok(())
 }
