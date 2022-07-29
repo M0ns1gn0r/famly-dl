@@ -11,7 +11,7 @@ use child_info::ChildInfo;
 use chrono::Datelike;
 use config::Config;
 use error_chain::error_chain;
-use post::Post;
+use post::{Post, Photo};
 use file_system::create_dir;
 
 error_chain! {
@@ -45,36 +45,7 @@ fn choose_target_child(child_infos: &Vec<ChildInfo>) -> &ChildInfo {
     }
 }
 
-fn get_posts(client: &reqwest::blocking::Client, child_id: &String) -> Result<Vec<Post>> {
-    let mut posts = vec![];
-    {
-        let mut i = 0_u8;
-        let mut older_than = None;
-        loop {
-            if i > 1 {
-                // TODO: remove this artificial break condition.
-                break;
-            }
-            i += 1;
-
-            let feed_json = http::fetch_feed(client, &older_than)?;
-            let (posts_portion, last_item_date) = post::from_feed_json(feed_json, child_id)?;
-
-            posts.extend(posts_portion);
-
-            if last_item_date.is_none() {
-                // The feed has ended.
-                break;
-            } else {
-                older_than = last_item_date;
-            }
-        }
-    }
-
-    Ok(posts)
-}
-
-fn download_posts(client: &reqwest::blocking::Client, posts: &Vec<Post>, child: &ChildInfo) -> Result<()> {
+fn store_posts(client: &reqwest::blocking::Client, posts: &Vec<Post>, child: &ChildInfo) -> Result<()> {
     let name = &child.get_first_name();
     let root_dir = std::path::Path::new(name);
     let tagged_photos_dir = root_dir.join("tagged_photos");
@@ -95,12 +66,12 @@ fn download_posts(client: &reqwest::blocking::Client, posts: &Vec<Post>, child: 
 
         // Download photos and create hardlinks.
         for ph in &p.photos {
-            let photo_file_name = format!("{0}.jpg", ph.id);
+            let photo_file_name = ph.get_file_name();
 
             let photo_path = post_photos_dir.join(&photo_file_name);
             if !photo_path.exists() {
                 let mut writer = std::fs::File::create(&photo_path)?;
-                http::download_file(client, &ph.url, &mut writer)?;
+                http::download_image(client, &ph.url, &mut writer)?;
             }
 
             if ph.is_tagged(&child.id) {
@@ -146,12 +117,28 @@ fn main() -> Result<()> {
     create_dir(child.get_first_name().as_str())
         .map_err(|e| format!("Cannot create the target folder: {0}", e))?;
 
-    let posts = get_posts(&client, &child.id)?;
+    // Fetch posts.
+    let posts = http::fetch_till_exhausted(|older_than| {
+        let json = http::fetch_feed(&client, &older_than)?;
+        Post::from_feed_json(json, &child.id)
+            .map_err(|e| http::Error::from(format!("Failed to deserialize posts: {}", e)))
+    })?;
     println!("{0} matching posts found", posts.len());
 
+    // Store posts and photos to disk.
     if posts.len() > 0 {
-        download_posts(&client, &posts, &child)?;
+        store_posts(&client, &posts, &child)?;
     }
+
+    // Fetch tagged photos info.
+    let tagged_photos = http::fetch_till_exhausted(|older_than| {
+        let json = http::fetch_tagged_photos(&client, &&child.id, &older_than)?;
+        Photo::from_json_array(json)
+            .map_err(|e| http::Error::from(format!("Failed to deserialize tagged photos: {}", e)))
+    })?;
+    println!("{0} tagged photos found", tagged_photos.len());
+
+    // TODO: store tagged photos.
 
     Ok(())
 }

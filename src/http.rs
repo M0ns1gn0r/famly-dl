@@ -59,7 +59,7 @@ pub fn fetch_child_infos(client: &Client) -> Result<String> {
 
 pub fn fetch_feed(client: &Client, older_than: &Option<String>) -> Result<String> {
     let mut url = String::from("https://app.famly.de/api/feed/feed/feed");
-    if let Some(date) =  older_than {
+    if let Some(date) = older_than {
         url.push_str("?olderThan=");
         url.push_str(encode(date).into_owned().as_str());
     }
@@ -71,7 +71,53 @@ pub fn fetch_feed(client: &Client, older_than: &Option<String>) -> Result<String
     Ok(body)
 }
 
-pub fn download_file<W: ?Sized>(_client: &Client, url: &String, writer: &mut W) -> Result<()>
+pub fn fetch_tagged_photos(client: &Client, child_id: &String, older_than: &Option<String>) -> Result<String> {
+    let mut url = format!("https://app.famly.de/api/v2/images/tagged?childId={}&limit=100", child_id);
+    if let Some(date) = older_than {
+        url.push_str("&olderThan=");
+        url.push_str(encode(date).into_owned().as_str());
+    }
+
+    let body = client
+        .get(url)
+        .send()?
+        .text()?;
+    Ok(body)
+}
+
+/// Fetches all items available through paginated API by continuously calling the predicate
+/// and passing the date of the last item from the previous call.
+pub fn fetch_till_exhausted<T, P>(load_next_batch: P) -> Result<Vec<T>>
+    where
+        P: Fn(Option<String>) -> Result<(Vec<T>, Option<String>)>,
+{
+    let mut items = vec![];
+
+    let mut i = 0_u8;
+    let mut older_than = None;
+    loop {
+        if i > 0 {
+            // TODO: remove this artificial break condition.
+            break;
+        }
+        i += 1;
+
+        let (batch, last_item_date) = load_next_batch(older_than)?;
+
+        items.extend(batch);
+
+        if last_item_date.is_none() {
+            // No older items are available.
+            break;
+        } else {
+            older_than = last_item_date;
+        }
+    }
+
+    Ok(items)
+}
+
+pub fn download_image<W: ?Sized>(_client: &Client, url: &String, writer: &mut W) -> Result<()>
     where W: std::io::Write,
 {
     let mut r = IMG_CLIENT
