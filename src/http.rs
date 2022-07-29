@@ -53,6 +53,7 @@ pub fn fetch_child_infos(client: &Client) -> Result<String> {
     client
         .get("https://app.famly.de/api/v2/calendar/list")
         .send()?
+        .error_for_status()?
         .read_to_string(&mut body)?;
     Ok(body)
 }
@@ -67,6 +68,7 @@ pub fn fetch_feed(client: &Client, older_than: &Option<String>) -> Result<String
     let body = client
         .get(url)
         .send()?
+        .error_for_status()?
         .text()?;
     Ok(body)
 }
@@ -81,6 +83,7 @@ pub fn fetch_tagged_photos(client: &Client, child_id: &String, older_than: &Opti
     let body = client
         .get(url)
         .send()?
+        .error_for_status()?
         .text()?;
     Ok(body)
 }
@@ -93,7 +96,7 @@ pub fn fetch_till_exhausted<T, P>(load_next_batch: P) -> Result<Vec<T>>
 {
     let mut items = vec![];
 
-    let mut i = 0_u8;
+    let mut i = 0_u16;
     let mut older_than = None;
     loop {
         if i > 0 {
@@ -101,6 +104,9 @@ pub fn fetch_till_exhausted<T, P>(load_next_batch: P) -> Result<Vec<T>>
             break;
         }
         i += 1;
+        if i % 5 == 0 {
+            println!("{} API calls done...", i);
+        }
 
         let (batch, last_item_date) = load_next_batch(older_than)?;
 
@@ -117,7 +123,7 @@ pub fn fetch_till_exhausted<T, P>(load_next_batch: P) -> Result<Vec<T>>
     Ok(items)
 }
 
-pub fn download_image<W: ?Sized>(_client: &Client, url: &String, writer: &mut W) -> Result<()>
+pub fn download_image<W: ?Sized>(url: &String, writer: &mut W) -> Result<()>
     where W: std::io::Write,
 {
     let mut r = IMG_CLIENT

@@ -46,7 +46,9 @@ fn choose_target_child(child_infos: &Vec<ChildInfo>) -> &ChildInfo {
     }
 }
 
-fn store_posts(client: &Client, posts: &Vec<Post>, child: &ChildInfo) -> Result<()> {
+fn store_posts(posts: &Vec<Post>, child: &ChildInfo) -> Result<()> {
+    println!("Storing posts...");
+
     let name = &child.get_first_name();
     let root_dir = std::path::Path::new(name);
     let tagged_photos_dir = root_dir.join("tagged_photos");
@@ -65,34 +67,35 @@ fn store_posts(client: &Client, posts: &Vec<Post>, child: &ChildInfo) -> Result<
         std::fs::write(htm_path, html)?;
 
         // Download photos and create hardlinks.
-        for ph in &p.photos {
-            let photo_file_name = ph.get_file_name();
+        // TODO: uncomment
+        // for ph in &p.photos {
+        //     let photo_file_name = ph.get_file_name();
 
-            let photo_path = post_photos_dir.join(&photo_file_name);
-            if !photo_path.exists() {
-                let mut writer = std::fs::File::create(&photo_path)?;
-                http::download_image(client, &ph.url, &mut writer)?;
-            }
+        //     let photo_path = post_photos_dir.join(&photo_file_name);
+        //     if !photo_path.exists() {
+        //         let mut writer = std::fs::File::create(&photo_path)?;
+        //         http::download_image(&ph.url, &mut writer)?;
+        //     }
 
-            if ph.is_tagged(&child.id) {
-                let tagged_photo_path = tagged_photos_dir.join(&photo_file_name);
-                if !tagged_photo_path.exists() {
-                    std::fs::hard_link(&photo_path, tagged_photo_path)?;
-                }
-            }
-        }
+        //     if ph.is_tagged(&child.id) {
+        //         let tagged_photo_path = tagged_photos_dir.join(&photo_file_name);
+        //         if !tagged_photo_path.exists() {
+        //             std::fs::hard_link(&photo_path, tagged_photo_path)?;
+        //         }
+        //     }
+        // }
 
         i += 1;
         if i % 5 == 0 {
-            println!("{} of {} posts downloaded...", i, total);
+            println!("{} of {} posts stored...", i, total);
         }
     }
 
-    println!("All posts downloaded");
+    println!("All posts stored");
     Ok(())
 }
 
-fn download_tagged_photos(client: &Client, photos: &Vec<Photo>, child: &ChildInfo) -> Result<()> {
+fn download_tagged_photos(photos: &Vec<Photo>, child: &ChildInfo) -> Result<()> {
     let dir_path = format!("{}/tagged_photos", &child.get_first_name());
     let tagged_photos_dir = std::path::Path::new(dir_path.as_str());
     std::fs::create_dir_all(&tagged_photos_dir)?;
@@ -103,18 +106,12 @@ fn download_tagged_photos(client: &Client, photos: &Vec<Photo>, child: &ChildInf
         let photo_path = tagged_photos_dir.join(p.get_file_name());
         if !photo_path.exists() {
             let mut writer = std::fs::File::create(&photo_path)?;
-            http::download_image(client, &p.url, &mut writer)?;
+            http::download_image(&p.url, &mut writer)?;
         }
 
         i += 1;
         if i % 10 == 0 {
             println!("{} of {} tagged photos downloaded...", i, total);
-        }
-
-        if i > 30 {
-            // TODO: remove this artificial break condition.
-            println!("ARTIFICIALLY STOPPED AFTER 30 ITERATIONS");
-            break;
         }
     }
 
@@ -148,6 +145,7 @@ fn main() -> Result<()> {
         .map_err(|e| format!("Cannot create the target folder: {0}", e))?;
 
     // Fetch posts.
+    println!("Fetching posts...");
     let posts = http::fetch_till_exhausted(|older_than| {
         let json = http::fetch_feed(&client, &older_than)?;
         Post::from_feed_json(json, &child.id)
@@ -157,10 +155,11 @@ fn main() -> Result<()> {
 
     // Store posts to disk and downloads related photos.
     if posts.len() > 0 {
-        store_posts(&client, &posts, &child)?;
+        store_posts(&posts, &child)?;
     }
 
     // Fetch tagged photos info.
+    println!("Fetching tagged photos...");
     let tagged_photos = http::fetch_till_exhausted(|older_than| {
         let json = http::fetch_tagged_photos(&client, &&child.id, &older_than)?;
         Photo::from_json_array(json)
@@ -170,7 +169,8 @@ fn main() -> Result<()> {
 
     // Download tagged photos.
     if tagged_photos.len() > 0 {
-        download_tagged_photos(&client, &tagged_photos, &child)?;
+        // TODO: uncomment
+        // download_tagged_photos(&client, &tagged_photos, &child)?;
     }
 
     // Create index.htm
