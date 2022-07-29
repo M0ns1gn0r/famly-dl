@@ -74,25 +74,45 @@ fn get_posts(client: &reqwest::blocking::Client, child_id: &String) -> Result<Ve
     Ok(posts)
 }
 
-fn download_posts(posts: &Vec<Post>, child: &ChildInfo) -> Result<()> {
+fn download_posts(client: &reqwest::blocking::Client, posts: &Vec<Post>, child: &ChildInfo) -> Result<()> {
     let name = &child.get_first_name();
     let root_dir = std::path::Path::new(name);
+    let tagged_photos_dir = root_dir.join("tagged_photos");
+    std::fs::create_dir_all(&tagged_photos_dir)?;
 
     let total = posts.len();
     let mut i = 0;
     for p in posts {
-        let dir = root_dir.join("posts");
-        std::fs::create_dir_all(&dir)?;
+        let posts_dir = root_dir.join("posts");
+        let post_photos_dir = posts_dir.join("photos");
+        std::fs::create_dir_all(&post_photos_dir)?;
 
         // Create HTM file with post content.
-        let file_path = dir.join(format!("{}.{:02} {}.htm", p.date.year() - 2000, p.date.month(), p.get_title()));
+        let htm_path = posts_dir.join(
+            format!("{}.{:02} {}.htm", p.date.year() - 2000, p.date.month(), p.get_title()));
         let html = html::render_post(p, child);
-        std::fs::write(file_path, html)?;
+        std::fs::write(htm_path, html)?;
 
-        // TODO: Download photos.
+        // Download photos and create hardlinks.
+        for ph in &p.photos {
+            let photo_file_name = format!("{0}.jpg", ph.id);
+
+            let photo_path = post_photos_dir.join(&photo_file_name);
+            if !photo_path.exists() {
+                let mut writer = std::fs::File::create(&photo_path)?;
+                http::download_file(client, &ph.url, &mut writer)?;
+            }
+
+            if ph.is_tagged(&child.id) {
+                let tagged_photo_path = tagged_photos_dir.join(&photo_file_name);
+                if !tagged_photo_path.exists() {
+                    std::fs::hard_link(&photo_path, tagged_photo_path)?;
+                }
+            }
+        }
 
         i += 1;
-        if i % 10 == 0 {
+        if i % 5 == 0 {
             println!("{} of {} posts downloaded...", i, total);
         }
     }
@@ -130,7 +150,7 @@ fn main() -> Result<()> {
     println!("{0} matching posts found", posts.len());
 
     if posts.len() > 0 {
-        download_posts(&posts, &child)?;
+        download_posts(&client, &posts, &child)?;
     }
 
     Ok(())
