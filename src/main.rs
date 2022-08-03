@@ -66,11 +66,6 @@ fn store_posts(posts: &Vec<Post>, child: &ChildInfo) -> Result<()> {
 
         // Download photos and create hardlinks.
         for ph in &p.photos {
-            if i > 10 {
-                // TODO: remove this artificial break condition.
-                break;
-            }
-
             let photo_file_name = ph.get_file_name();
 
             let photo_path = post_photos_dir.join(&photo_file_name);
@@ -114,12 +109,6 @@ fn download_tagged_photos(photos: &Vec<Photo>, child: &ChildInfo) -> Result<()> 
         i += 1;
         if i % 10 == 0 {
             println!("{} of {} tagged photos downloaded...", i, total);
-        }
-
-        if i > 30 {
-            // TODO: remove this artificial break condition.
-            println!("STOPPED DOWNLOADING TAGGED PHOTOS");
-            break;
         }
     }
 
